@@ -41,14 +41,14 @@ trait BtcMessage[T] {
    * @param in input stream
    * @return a deserialized message
    */
-  def read(in: InputStream): T
+  def read(in: DataInputStream): T
 
   /**
    * read a message from a byte array
    * @param in serialized message
    * @return a deserialized message
    */
-  def read(in: Array[Byte]): T = read(new ByteArrayInputStream(in))
+  def read(in: Array[Byte]): T = read(new DataInputStream(new ByteArrayInputStream(in)))
 
   /**
    * read a message from a hex string
@@ -64,7 +64,7 @@ trait BtcMessage[T] {
 object OutPoint extends BtcMessage[OutPoint] {
   def apply(tx: Transaction, index: Int) = new OutPoint(Transaction.hash(tx), index)
 
-  override def read(input: InputStream): OutPoint = OutPoint(hash(input), uint32(input))
+  override def read(input: DataInputStream): OutPoint = OutPoint(hash(input), uint32(input))
 
   override def write(input: OutPoint, out: OutputStream) = {
     out.write(input.hash)
@@ -91,7 +91,7 @@ case class OutPoint(hash: BinaryData, index: Long) {
 }
 
 object TxIn extends BtcMessage[TxIn] {
-  override def read(input: InputStream): TxIn = TxIn(outPoint = OutPoint.read(input), signatureScript = script(input), sequence = uint32(input))
+  override def read(input: DataInputStream): TxIn = TxIn(outPoint = OutPoint.read(input), signatureScript = script(input), sequence = uint32(input))
 
   override def write(input: TxIn, out: OutputStream) = {
     OutPoint.write(input.outPoint, out)
@@ -119,7 +119,7 @@ object TxIn extends BtcMessage[TxIn] {
 case class TxIn(outPoint: OutPoint, signatureScript: BinaryData, sequence: Long)
 
 object TxOut extends BtcMessage[TxOut] {
-  override def read(input: InputStream): TxOut = TxOut(uint64(input), script(input))
+  override def read(input: DataInputStream): TxOut = TxOut(uint64(input), script(input))
 
   override def write(input: TxOut, out: OutputStream) = {
     writeUInt64(input.amount, out)
@@ -142,7 +142,7 @@ object TxOut extends BtcMessage[TxOut] {
 case class TxOut(amount: Long, publicKeyScript: BinaryData)
 
 object Transaction extends BtcMessage[Transaction] {
-  override def read(input: InputStream): Transaction = {
+  override def read(input: DataInputStream): Transaction = {
     val version = uint32(input)
     val nbrIn = varint(input)
     val txIn = ArrayBuffer.empty[TxIn]
@@ -317,7 +317,7 @@ case class Transaction(version: Long, txIn: Seq[TxIn], txOut: Seq[TxOut], lockTi
 }
 
 object BlockHeader extends BtcMessage[BlockHeader] {
-  override def read(input: InputStream): BlockHeader = {
+  override def read(input: DataInputStream): BlockHeader = {
     val version = uint32(input)
     val hashPreviousBlock = hash(input)
     val hashMerkleRoot = hash(input)
@@ -382,9 +382,9 @@ object MerkleTree {
 }
 
 object Block extends BtcMessage[Block] {
-  override def read(input: InputStream): Block = {
+  override def read(input: DataInputStream): Block = {
     val raw = bytes(input, 80)
-    val header = BlockHeader.read(new ByteArrayInputStream(raw))
+    val header = BlockHeader.read(new DataInputStream(new ByteArrayInputStream(raw)))
     val nbrTx = varint(input)
     val tx = ArrayBuffer.empty[Transaction]
     for (i <- 1L to nbrTx) {
@@ -490,17 +490,17 @@ object Message extends BtcMessage[Message] {
   val MagicTestnet3 = 0x0709110BL
   val MagicNamecoin = 0xFEB4BEF9L
 
-  override def read(in: InputStream): Message = {
+  override def read(in: DataInputStream): Message = {
     val magic = uint32(in)
     val buffer = new Array[Byte](12)
-    in.read(buffer)
+    in.readFully(buffer)
     val buffer1 = buffer.takeWhile(_ != 0)
     val command = new String(buffer1, "ISO-8859-1")
     val length = uint32(in)
     require(length < 2000000, "invalid payload length")
     val checksum = uint32(in)
     val payload = new Array[Byte](length.toInt)
-    in.read(payload)
+    in.readFully(payload)
     require(checksum == uint32(Crypto.hash256(payload).take(4)), "invalid checksum")
     Message(magic, command, payload)
   }
@@ -528,11 +528,11 @@ case class Message(magic: Long, command: String, payload: BinaryData) {
 }
 
 object NetworkAddressWithTimestamp extends BtcMessage[NetworkAddressWithTimestamp] {
-  override def read(in: InputStream): NetworkAddressWithTimestamp = {
+  override def read(in: DataInputStream): NetworkAddressWithTimestamp = {
     val time = uint32(in)
     val services = uint64(in)
     val raw = new Array[Byte](16)
-    in.read(raw)
+    in.readFully(raw)
     require(toHexString(raw.take(12)) == "00000000000000000000ffff", "IPV4 only")
     val address = InetAddress.getByAddress(raw.takeRight(4))
     val port = uint16BigEndian(in)
@@ -551,10 +551,10 @@ object NetworkAddressWithTimestamp extends BtcMessage[NetworkAddressWithTimestam
 case class NetworkAddressWithTimestamp(time: Long, services: Long, address: InetAddress, port: Long)
 
 object NetworkAddress extends BtcMessage[NetworkAddress] {
-  override def read(in: InputStream): NetworkAddress = {
+  override def read(in: DataInputStream): NetworkAddress = {
     val services = uint64(in)
     val raw = new Array[Byte](16)
-    in.read(raw)
+    in.readFully(raw)
     require(toHexString(raw.take(12)) == "00000000000000000000ffff", "IPV4 only")
     val address = InetAddress.getByAddress(raw.takeRight(4))
     val port = uint16BigEndian(in)
@@ -572,7 +572,7 @@ object NetworkAddress extends BtcMessage[NetworkAddress] {
 case class NetworkAddress(services: Long, address: InetAddress, port: Long)
 
 object Version extends BtcMessage[Version] {
-  override def read(in: InputStream): Version = {
+  override def read(in: DataInputStream): Version = {
     val version = uint32(in)
     val services = uint64(in)
     val timestamp = uint64(in)
@@ -581,7 +581,7 @@ object Version extends BtcMessage[Version] {
     val nonce = uint64(in)
     val length = varint(in)
     val buffer = new Array[Byte](length.toInt)
-    in.read(buffer)
+    in.readFully(buffer)
     val user_agent = new String(buffer, "ISO-8859-1")
     val start_height = uint32(in)
     val relay = if (uint8(in) == 0) false else true
@@ -624,7 +624,7 @@ object Addr extends BtcMessage[Addr] {
     t.addresses.map(a => NetworkAddressWithTimestamp.write(a, out))
   }
 
-  override def read(in: InputStream): Addr = {
+  override def read(in: DataInputStream): Addr = {
     val length = varint(in)
     require(length <= 1000, "invalid length")
     val addr = ArrayBuffer.empty[NetworkAddressWithTimestamp]
@@ -647,7 +647,7 @@ object InventoryVector extends BtcMessage[InventoryVector] {
     out.write(t.hash)
   }
 
-  override def read(in: InputStream): InventoryVector = InventoryVector(uint32(in), hash(in))
+  override def read(in: DataInputStream): InventoryVector = InventoryVector(uint32(in), hash(in))
 }
 
 case class InventoryVector(`type`: Long, hash: BinaryData) {
@@ -660,7 +660,7 @@ object Inventory extends BtcMessage[Inventory] {
     t.inventory.map(i => InventoryVector.write(i, out))
   }
 
-  override def read(in: InputStream): Inventory = {
+  override def read(in: DataInputStream): Inventory = {
     val length = varint(in)
     require(length < 1000, "invalid length")
     val vector = ArrayBuffer.empty[InventoryVector]
@@ -681,7 +681,7 @@ object Getblocks extends BtcMessage[Getblocks] {
     out.write(t.stopHash)
   }
 
-  override def read(in: InputStream): Getblocks = {
+  override def read(in: DataInputStream): Getblocks = {
     val version = uint32(in)
     val vector = ArrayBuffer.empty[BinaryData]
     val count = varint(in)
@@ -704,7 +704,7 @@ object Getdata extends BtcMessage[Getdata] {
     t.inventory.map(i => InventoryVector.write(i))
   }
 
-  override def read(in: InputStream): Getdata = {
+  override def read(in: DataInputStream): Getdata = {
     val vector = ArrayBuffer.empty[InventoryVector]
     val count = varint(in)
     for (i <- 1L to count) {

@@ -1,6 +1,6 @@
 package fr.acinq.bitcoin
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.io.{DataInputStream, ByteArrayInputStream, ByteArrayOutputStream}
 import java.math.BigInteger
 import java.net.InetAddress
 import java.util
@@ -13,7 +13,7 @@ import org.scalatest.junit.JUnitRunner
 @RunWith(classOf[JUnitRunner])
 class ProtocolSpec extends FlatSpec {
   "Protocol" should "parse blochain blocks" in {
-    val stream = classOf[ProtocolSpec].getResourceAsStream("/block1.dat")
+    val stream = new DataInputStream(classOf[ProtocolSpec].getResourceAsStream("/block1.dat"))
     val block = Block.read(stream)
     assert(Block.checkProofOfWork(block))
     // check that we can deserialize and re-serialize scripts
@@ -120,7 +120,7 @@ class ProtocolSpec extends FlatSpec {
     assert(toHexString(Message.write(message1)) === "f9beb4d96164647200000000000000001f000000ed52399b01e215104d010000000000000000000000000000000000ffff0a000001208d")
   }
   it should "read and write addr messages 2" in {
-    val stream = classOf[ProtocolSpec].getResourceAsStream("/addr.dat")
+    val stream = new DataInputStream(classOf[ProtocolSpec].getResourceAsStream("/addr.dat"))
     val message = Message.read(stream)
     assert(message.command === "addr")
     val addr = Addr.read(message.payload)
@@ -132,7 +132,7 @@ class ProtocolSpec extends FlatSpec {
     assert(inventory.inventory(0).`type` === InventoryVector.MSG_TX)
   }
   it should "read and write inventory messages 2" in {
-    val stream = classOf[ProtocolSpec].getResourceAsStream("/inv.dat")
+    val stream = new DataInputStream(classOf[ProtocolSpec].getResourceAsStream("/inv.dat"))
     val message = Message.read(stream)
     assert(message.command === "inv")
     val inv = Inventory.read(message.payload)
@@ -148,7 +148,7 @@ class ProtocolSpec extends FlatSpec {
     assert(toHexString(Getblocks.write(getblocks)) === toHexString(message.payload))
   }
   it should "read and write getdata messages"in {
-    val stream = classOf[ProtocolSpec].getResourceAsStream("/getdata.dat")
+    val stream = new DataInputStream(classOf[ProtocolSpec].getResourceAsStream("/getdata.dat"))
     val message = Message.read(stream)
     assert(message.command === "getdata")
     val getdata = Getdata.read(message.payload)

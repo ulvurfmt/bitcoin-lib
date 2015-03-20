@@ -24,9 +24,9 @@ object ReadBlockChain extends App {
       override def accept(dir: File, name: String): Boolean = ???
     })
   }
-  val input = new BufferedInputStream(new FileInputStream(path))
+  val input = new DataInputStream(new BufferedInputStream(new FileInputStream(path)))
 
-  def skipBlock(input: InputStream): Unit = {
+  def skipBlock(input: DataInputStream): Unit = {
     val magic = uint32(input)
     assert(magic == 0xd9b4bef9L)
     val size = uint32(input)
@@ -34,13 +34,13 @@ object ReadBlockChain extends App {
   }
 
   var prev = ""
-  def readBlock(input: InputStream, verbose: Boolean = false): Unit = {
+  def readBlock(input: DataInputStream, verbose: Boolean = false): Unit = {
     val magic = uint32(input)
     assert(magic == 0xd9b4bef9L)
     val size = uint32(input)
     val raw = new Array[Byte](size.toInt)
     input.read(raw)
-    val block = Block.read(new ByteArrayInputStream(raw))
+    val block = Block.read(new DataInputStream(new ByteArrayInputStream(raw)))
     val expected = toHexString(block.header.hashPreviousBlock)
     if (expected != prev) println("warning: expected previous hash does not match previous hash")
     prev = toHexString(block.hash)

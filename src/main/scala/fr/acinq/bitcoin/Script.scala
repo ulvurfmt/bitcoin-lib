@@ -1,6 +1,6 @@
 package fr.acinq.bitcoin
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, OutputStream}
+import java.io._
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
@@ -90,7 +90,7 @@ object Script {
    * @return an updated command stack
    */
   @tailrec
-  def parse(input: InputStream, stack: collection.immutable.Vector[ScriptElt] = Vector.empty[ScriptElt]): List[ScriptElt] = {
+  def parse(input: DataInputStream, stack: collection.immutable.Vector[ScriptElt] = Vector.empty[ScriptElt]): List[ScriptElt] = {
     val code = input.read()
     code match {
       case -1 => stack.toList
@@ -104,7 +104,7 @@ object Script {
     }
   }
 
-  def parse(blob: Array[Byte]): List[ScriptElt] = if (blob.length > 10000) throw new RuntimeException("script is too large") else parse(new ByteArrayInputStream(blob))
+  def parse(blob: Array[Byte]): List[ScriptElt] = if (blob.length > 10000) throw new RuntimeException("script is too large") else parse(new DataInputStream(new ByteArrayInputStream(blob)))
 
   def write(script: List[ScriptElt], out: OutputStream): Unit = script match {
     case Nil => ()

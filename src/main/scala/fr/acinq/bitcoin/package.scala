@@ -26,7 +26,7 @@ package object bitcoin {
 
   def uint8(blob: IndexedSeq[Byte]) = blob(0) & 0xffl
 
-  def uint8(input: InputStream): Long = input.read().toLong
+  def uint8(input: DataInputStream): Long = input.read().toLong
 
   def writeUInt8(input: Long, out: OutputStream): Unit = out.write((input & 0xff).asInstanceOf[Int])
 
@@ -46,9 +46,9 @@ package object bitcoin {
 
   def uint16BigEndian(blob: Array[Byte]): Long = uint16BigEndian(blob(0), blob(1))
 
-  def uint16(input: InputStream): Long = uint16(input.read(), input.read())
+  def uint16(input: DataInputStream): Long = uint16(input.read(), input.read())
 
-  def uint16BigEndian(input: InputStream): Long = uint16BigEndian(input.read(), input.read())
+  def uint16BigEndian(input: DataInputStream): Long = uint16BigEndian(input.read(), input.read())
 
   def writeUInt16(input: Long, out: OutputStream): Unit = {
     writeUInt8((input) & 0xff, out)
@@ -74,9 +74,9 @@ package object bitcoin {
 
   def uint32(blob: IndexedSeq[Byte]): Long = uint32(blob(0), blob(1), blob(2), blob(3))
 
-  def uint32(input: InputStream): Long = {
+  def uint32(input: DataInputStream): Long = {
     val blob = new Array[Byte](4)
-    input.read(blob)
+    input.readFully(blob)
     uint32(blob)
   }
 
@@ -120,7 +120,7 @@ package object bitcoin {
 
   def uint64(blob: IndexedSeq[Byte]): Long = uint64(blob(0), blob(1), blob(2), blob(3), blob(4), blob(5), blob(6), blob(7))
 
-  def uint64(input: InputStream): Long = uint64(input.read(), input.read(), input.read(), input.read(), input.read(), input.read(), input.read(), input.read())
+  def uint64(input: DataInputStream): Long = uint64(input.read(), input.read(), input.read(), input.read(), input.read(), input.read(), input.read(), input.read())
 
   def writeUInt64(input: Long, out: OutputStream): Unit = {
     writeUInt8((input) & 0xff, out)
@@ -141,9 +141,9 @@ package object bitcoin {
 
   def writeUInt64(input: Int, out: OutputStream): Unit = writeUInt64(input.toLong, out)
 
-  def varint(blob: Array[Byte]): Long = varint(new ByteArrayInputStream(blob))
+  def varint(blob: Array[Byte]): Long = varint(new DataInputStream(new ByteArrayInputStream(blob)))
 
-  def varint(input: InputStream): Long = input.read() match {
+  def varint(input: DataInputStream): Long = input.read() match {
     case value if value < 0xfd => value
     case 0xfd => uint16(input)
     case 0xfe => uint32(input)
@@ -168,9 +168,9 @@ package object bitcoin {
     }
   }
 
-  def bytes(input: InputStream, size: Long): Array[Byte] = bytes(input, size.toInt)
+  def bytes(input: DataInputStream, size: Long): Array[Byte] = bytes(input, size.toInt)
 
-  def bytes(input: InputStream, size: Int): Array[Byte] = {
+  def bytes(input: DataInputStream, size: Int): Array[Byte] = {
     val blob = new Array[Byte](size)
     if (size > 0) {
       val count = input.read(blob)
@@ -179,9 +179,9 @@ package object bitcoin {
     blob
   }
 
-  def hash(input: InputStream): Array[Byte] = bytes(input, 32) // a hash is always 256 bits
+  def hash(input: DataInputStream): Array[Byte] = bytes(input, 32) // a hash is always 256 bits
 
-  def script(input: InputStream): Array[Byte] = {
+  def script(input: DataInputStream): Array[Byte] = {
     val length = varint(input) // read size
     bytes(input, length.toInt) // read bytes
   }
