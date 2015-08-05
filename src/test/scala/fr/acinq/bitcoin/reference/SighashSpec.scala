@@ -20,7 +20,7 @@ class SighashSpec extends FlatSpec {
   "bitcoin-lib" should "pass reference client sighash tests" in {
     import shapeless._
     import syntax.std.traversable._
-    val stream = classOf[Base58Spec].getResourceAsStream("/sighash.json")
+    val stream = classOf[Base58Spec].getResourceAsStream("/data/sighash.json")
     val json = JsonMethods.parse(new InputStreamReader(stream))
     // use tail to skip the first line of the .json file
     json.extract[List[List[Any]]].tail.map(_.toHList[String :: String :: BigInt :: BigInt :: String :: HNil]).map(_ match {

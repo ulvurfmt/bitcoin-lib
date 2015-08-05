@@ -59,7 +59,6 @@ class CheckLockTimeVerifySpec extends FlatSpec {
       val sigScript = Script.write(OP_PUSHDATA(sig) :: OP_1 :: Nil)
 
       tmpTx.updateSigScript(0, sigScript)
-      //tmpTx.copy(txIn = tmpTx.txIn.updated(0, tmpTx.txIn(0).copy(signatureScript = sigScript)))
     }
     Transaction.correctlySpends(tx1, Seq(tx), ScriptFlags.STANDARD_SCRIPT_VERIFY_FLAGS | ScriptFlags.SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY)
 
@@ -79,7 +78,6 @@ class CheckLockTimeVerifySpec extends FlatSpec {
       val sigScript = Script.write(OP_PUSHDATA(sig) :: OP_1 :: Nil)
 
       tmpTx.updateSigScript(0, sigScript)
-      //tmpTx.copy(txIn = tmpTx.txIn.updated(0, tmpTx.txIn(0).copy(signatureScript = sigScript)))
     }
 
     intercept[RuntimeException] {
@@ -100,7 +98,6 @@ class CheckLockTimeVerifySpec extends FlatSpec {
       val sigScript = Script.write(OP_0 :: OP_PUSHDATA(sig1) :: OP_PUSHDATA(sig2) :: OP_0 :: Nil)
 
       tmpTx.updateSigScript(0, sigScript)
-      //tmpTx.copy(txIn = tmpTx.txIn.updated(0, tmpTx.txIn(0).copy(signatureScript = scriptSig)))
     }
     Transaction.correctlySpends(tx2, Seq(tx), ScriptFlags.STANDARD_SCRIPT_VERIFY_FLAGS | ScriptFlags.SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY)
   }

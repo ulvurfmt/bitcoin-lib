@@ -20,7 +20,7 @@ class Base58Spec extends FlatSpec {
   def resourceReader(resource: String) = new InputStreamReader(resourceStream(resource))
 
   "Base58" should "pass reference client encode/decode tests" in {
-    val data = Serialization.read[List[List[String]]](resourceReader("/base58_encode_decode.json"))
+    val data = Serialization.read[List[List[String]]](resourceReader("/data/base58_encode_decode.json"))
     data.map(_ match {
       case hex :: expected :: Nil =>
         assert(Base58.encode(fromHexString(hex)) === expected)
@@ -35,7 +35,7 @@ class Base58Spec extends FlatSpec {
     import syntax.std.traversable._
     import HList._
 
-    val stream = classOf[Base58Spec].getResourceAsStream("/base58_keys_valid.json")
+    val stream = classOf[Base58Spec].getResourceAsStream("/data/base58_keys_valid.json")
     val json = JsonMethods.parse(new InputStreamReader(stream))
     json.extract[List[List[Any]]].map(_.toHList[String::String::Map[String, Any]::HNil]).map(_ match {
       case Some(base58 :: hex :: map :: HNil) => {
