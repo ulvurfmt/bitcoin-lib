@@ -20,6 +20,7 @@ package object bitcoin {
   val SIGHASH_ALL = 1
   val SIGHASH_NONE = 2
   val SIGHASH_SINGLE = 3
+  val SIGHASH_NOINPUT = 0x20
   val SIGHASH_ANYONECANPAY = 0x80
 
   object Hash {
@@ -246,4 +247,6 @@ package object bitcoin {
   def isHashSingle(sighashType: Int): Boolean = (sighashType & 0x1f) == SIGHASH_SINGLE
 
   def isHashNone(sighashType: Int): Boolean = (sighashType & 0x1f) == SIGHASH_NONE
+
+  def isHashNoInput(sighashType: Int): Boolean = (sighashType & SIGHASH_NOINPUT) != 0
 }

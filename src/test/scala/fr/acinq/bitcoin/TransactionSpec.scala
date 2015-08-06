@@ -239,4 +239,23 @@ class TransactionSpec extends FlatSpec with Matchers {
     // redeem tx
     Transaction.correctlySpends(signedTx, previousTx, ScriptFlags.MANDATORY_SCRIPT_VERIFY_FLAGS)
   }
+  it should "implement SIGHASH_NOINPUT" in {
+    val (_, privateKey) = Address.decode("cRp4uUnreGMZN8vB7nQFX6XWMHU5Lc73HMAhmcDEwHfbgRS66Cqp")
+    val to = "mi1cMMSL9BZwTQZYpweE1nTmwRxScirPp3"
+    val amount = 10000
+
+    val previousTx = Transaction.read("0100000001b021a77dcaad3a2da6f1611d2403e1298a902af8567c25d6e65073f6b52ef12d000000006a473044022056156e9f0ad7506621bc1eb963f5133d06d7259e27b13fcb2803f39c7787a81c022056325330585e4be39bcf63af8090a2deff265bc29a3fb9b4bf7a31426d9798150121022dfb538041f111bb16402aa83bd6a3771fa8aa0e5e9b0b549674857fafaf4fe0ffffffff0210270000000000001976a91415c23e7f4f919e9ff554ec585cb2a67df952397488ac3c9d1000000000001976a9148982824e057ccc8d4591982df71aa9220236a63888ac00000000")
+
+    val tx = Transaction(
+      version = 2,
+      txIn = TxIn(OutPoint(previousTx.hash, 0), sequence = 0xffffffffL, signatureScript = Array.empty[Byte]) :: Nil,
+      txOut = TxOut(amount, Script.write(OP_DUP :: OP_HASH160 :: OP_PUSHDATA(Address.decode(to)._2) :: OP_EQUALVERIFY :: OP_CHECKSIG :: Nil)) :: Nil,
+      lockTime = 0L
+    )
+    val hash: BinaryData = Transaction.hashForSigning(tx, 0, previousTx.txOut(0).publicKeyScript, SIGHASH_ALL | SIGHASH_NOINPUT)
+
+    val tx1 = tx.copy(txIn = TxIn(OutPoint(previousTx.hash.reverse, 0), sequence = 0xffffffffL, signatureScript = Array.empty[Byte]) :: Nil)
+    val hash1: BinaryData = Transaction.hashForSigning(tx1, 0, previousTx.txOut(0).publicKeyScript, SIGHASH_ALL | SIGHASH_NOINPUT)
+    assert(hash1 === hash)
+  }
 }

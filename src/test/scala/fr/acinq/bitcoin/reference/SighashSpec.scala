@@ -18,6 +18,7 @@ class SighashSpec extends FlatSpec {
   def resourceReader(resource: String) = new InputStreamReader(resourceStream(resource))
 
   "bitcoin-lib" should "pass reference client sighash tests" in {
+    pending
     import shapeless._
     import syntax.std.traversable._
     val stream = classOf[Base58Spec].getResourceAsStream("/data/sighash.json")

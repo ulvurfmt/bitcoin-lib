@@ -225,7 +225,7 @@ object Transaction extends BtcMessage[Transaction] {
       val tx1 = removeAllSignatureScripts(tx)
       val tx2 = updateSignatureScript(tx1, inputIndex, filteredScript)
 
-      val tx3 = if (isHashNone(sighashType)) {
+      val tx3b = if (isHashNone(sighashType)) {
         // hash none: remove all outputs
         val inputs = resetSequence(tx2.txIn, inputIndex)
         tx2.copy(txIn = inputs, txOut = List())
@@ -240,6 +240,11 @@ object Transaction extends BtcMessage[Transaction] {
         tx2.copy(txIn = inputs, txOut = outputs)
       }
       else tx2
+
+      val tx3 = if (tx.version >= 2 && isHashNoInput(sighashType)) {
+        tx3b.copy(txIn = tx3b.txIn.map(_.copy(outPoint = OutPoint(Hash.Zeroes, 0xffffffffL))))
+      }  else tx3b
+
       // anyone can pay: remove all inputs but the one that we are processing
       val tx4 = if (isAnyoneCanPay(sighashType)) tx3.copy(txIn = List(tx3.txIn(inputIndex))) else tx3
       tx4

@@ -58,6 +58,10 @@ class MultisigSpec extends FlatSpec with Matchers {
     //this is the P2SH multisig input transaction
     val previousTx = Transaction.read("0100000001ea1df27ca8a897c985f163407e2c20cbc310ca891ca361c207ba8f4b7073e541000000008b483045022100940f7bcb380fb6db698f71928bda8926f76305ff868919e8ef7729647606bf7702200d32f1231860cb7e6777447c4038627bee7f47bc54005f681b62ce71d4a6a7f10141042adeabf9817a4d34adf1fe8e0fd457a3c0c6378afd63325dbaaaccd4f254002f9cc4148f603beb0e874facd3a3e68f5d002a65c0d3658452a4e55a57f5c3b768ffffffff01a0bb0d000000000017a914a90003b4ddef4be46fc61e7f2167da9d234944e28700000000")
 
+    // check the prevout pubkey script
+    assert(Script.isPayToScript(previousTx.txOut(0).publicKeyScript))
+    assert(Script.parse(previousTx.txOut(0).publicKeyScript) === OP_HASH160 :: OP_PUSHDATA(Crypto.hash160(redeemScript)) :: OP_EQUAL :: Nil)
+
     val dest = "msCMyGGJ5eRcUgM5SQkwirVQGbGcr9oaYv" //priv: 92TgRLMLLdwJjT1JrrmTTWEpZ8uG7zpHEgSVPTbwfAs27RpdeWM
     // 0.008 BTC in satoshi, meaning the fee will be 0.009-0.008 = 0.001
     val amount = 800000
@@ -72,28 +76,15 @@ class MultisigSpec extends FlatSpec with Matchers {
       lockTime = 0L
     )
 
-    // replace the empty sig script by the redeem script
-    val tmpTx = tx.copy(txIn = List(tx.txIn(0).copy(signatureScript = redeemScript)))
-    val hashed = Crypto.hash256(Transaction.write(tmpTx) ++ writeUInt32(1))
-
     // we only need 2 signatures because this is a 2-on-3 multisig
-    val sig1 = {
-      val (r, s) = Crypto.sign(hashed, key1, randomize = false)
-      Crypto.encodeSignature(r, s) // DER encoded
-    }
-    val sig2 = {
-      val (r, s) = Crypto.sign(hashed, key2, randomize = false)
-      Crypto.encodeSignature(r, s) // DER encoded
-    }
+    val sig1 = Transaction.signInput(tx, 0, redeemScript, SIGHASH_ALL, key1, randomize = false)
+    val sig2 = Transaction.signInput(tx, 0, redeemScript, SIGHASH_ALL, key2, randomize = false)
     // OP_0 because of a bug in OP_CHECKMULTISIG
-    val scriptSig = Script.write(OP_0 :: OP_PUSHDATA(sig1 :+ 1.toByte) :: OP_PUSHDATA(sig2 :+ 1.toByte) :: OP_PUSHDATA(redeemScript) :: Nil)
-    val signedTx = tx.copy(txIn = List(tx.txIn(0).copy(signatureScript = scriptSig)))
+    val signedTx = tx.updateSigScript(0, Script.write(OP_0 :: OP_PUSHDATA(sig1) :: OP_PUSHDATA(sig2) :: OP_PUSHDATA(redeemScript) :: Nil))
 
-    //this works because signature is not randomized
+    //this works because signatures are not randomized
     toHexString(Transaction.write(signedTx)) should equal("0100000001345b2a5f872f73de2c4f32e4c28834832ba4c2ce5e54af1e8b897f49766141af00000000fdfe0000483045022100e5a3c850d7cb8776bfbd3fa4b24ce9bb3514fe96a922449dd14c03f5fa04d6ad022035710c6b9c2922c7b8de02fb674cb61e2c18ea439b190b4f55c14fad1ed89eb801483045022100ec6b1ea37cc5694312f7d5fe72280ef21688d11e00f307fdcc1eff30718e30560220542e02c32e3e392cce7adfc287c72f7f1e51ca73980505c2bebcf0b7b441ff90014c6952210394d30868076ab1ea7736ed3bdbec99497a6ad30b25afd709cdf3804cd389996a21032c58bc9615a6ff24e9132cef33f1ef373d97dc6da7933755bc8bb86dbee9f55c2102c4d72d99ca5ad12c17c9cfe043dc4e777075e8835af96f46d8e3ccd929fe192653aeffffffff0100350c00000000001976a914801d5eb10d2c1513ba1960fd8893f0ddbbe33bb388ac00000000")
 
-    // the id of this tx on testnet is f137884feb9a951bf9b159432ebb771ec76fa6e7332c06cb8a6b718148f101af
-    // redeem the tx
     Transaction.correctlySpends(signedTx, List(previousTx), ScriptFlags.MANDATORY_SCRIPT_VERIFY_FLAGS)
   }
 }

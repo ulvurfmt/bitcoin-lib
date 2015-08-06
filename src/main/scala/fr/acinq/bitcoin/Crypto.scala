@@ -137,7 +137,7 @@ object Crypto {
 
   def isDefinedHashtypeSignature(sig: Seq[Byte]): Boolean = if (sig.isEmpty) false
   else {
-    val hashType = sig.last & (~(SIGHASH_ANYONECANPAY))
+    val hashType = sig.last & (~(SIGHASH_ANYONECANPAY | SIGHASH_NOINPUT))
     if (hashType < SIGHASH_ALL || hashType > SIGHASH_SINGLE) false else true
   }
 
