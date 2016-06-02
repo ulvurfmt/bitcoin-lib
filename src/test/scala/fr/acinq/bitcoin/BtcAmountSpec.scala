@@ -26,4 +26,16 @@ class BtcAmountSpec extends FunSuite {
       val toomany = 22e6 btc
     }
   }
+
+  test("basic operations") {
+    val x = 1.1 btc
+    val y: Btc = x - Satoshi(50000)
+    val z: Satoshi = y
+    assert(z === Satoshi(109950000))
+    assert(z + z === Satoshi(109950000 + 109950000))
+    assert(z + z - z === z)
+    assert((z + z) / 2 === z)
+    assert((z * 3) / 3 === z)
+    assert(Seq(500 satoshi, 100 satoshi, 50 satoshi).sum === Satoshi(650))
+  }
 }
