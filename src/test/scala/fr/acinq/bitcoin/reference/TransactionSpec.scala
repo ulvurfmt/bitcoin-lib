@@ -20,7 +20,7 @@ object TransactionSpec {
       case JString(value) :: Nil => comment = value
       case JArray(m) :: JString(serializedTransaction) :: JString(verifyFlags) :: Nil => {
         val prevoutMap = collection.mutable.HashMap.empty[OutPoint, BinaryData]
-        val prevamountMap = collection.mutable.HashMap.empty[OutPoint, Long]
+        val prevamountMap = collection.mutable.HashMap.empty[OutPoint, Satoshi]
         m.map(_ match {
           case JArray(List(JString(hash), JInt(index), JString(scriptPubKey))) => {
             val prevoutScript = ScriptSpec.parseFromText(scriptPubKey)
@@ -29,7 +29,7 @@ object TransactionSpec {
           case JArray(List(JString(hash), JInt(index), JString(scriptPubKey), JInt(amount))) => {
             val prevoutScript = ScriptSpec.parseFromText(scriptPubKey)
             prevoutMap += OutPoint(fromHexString(hash).reverse, index.toLong) -> prevoutScript
-            prevamountMap += OutPoint(fromHexString(hash).reverse, index.toLong) -> amount.toLong
+            prevamountMap += OutPoint(fromHexString(hash).reverse, index.toLong) -> Satoshi(amount.toLong)
           }
         })
 
@@ -38,7 +38,7 @@ object TransactionSpec {
           Transaction.validate(tx)
           for(i <- 0 until tx.txIn.length if !OutPoint.isCoinbase(tx.txIn(i).outPoint)) {
             val prevOutputScript = prevoutMap(tx.txIn(i).outPoint)
-            val amount = prevamountMap.get(tx.txIn(i).outPoint).getOrElse(0L)
+            val amount = prevamountMap.get(tx.txIn(i).outPoint).getOrElse(0 satoshi)
             val ctx = new Script.Context(tx, i, amount)
             val runner = new Script.Runner(ctx, ScriptSpec.parseScriptFlags(verifyFlags))
             if (!runner.verifyScripts(tx.txIn(i).signatureScript, prevOutputScript, tx.witness(i))) throw new RuntimeException(s"tx ${tx.txid} does not spend its input # $i")

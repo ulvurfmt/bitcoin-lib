@@ -85,7 +85,7 @@ object ScriptSpec {
     val scriptPubKey = parseFromText(scriptPubKeyText)
     val scriptSig = parseFromText(scriptSigText)
     val tx = spendingTx(scriptSig, creditTx(scriptPubKey, amount)).copy(witness = Seq(witness))
-    val ctx = Script.Context(tx, 0, btc2satoshi(amount).toLong)
+    val ctx = Script.Context(tx, 0, amount)
     val runner = new Script.Runner(ctx, parseScriptFlags(flags))
 
     val result = Try(runner.verifyScripts(scriptSig, scriptPubKey, witness)).getOrElse(false)

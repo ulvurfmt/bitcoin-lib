@@ -37,7 +37,7 @@ class ScriptSpec extends FlatSpec {
       txIn = TxIn(OutPoint(new Array[Byte](32), 0xffffffff), Script.write(OP_NOP :: Nil), 0xffffffff) :: Nil,
       txOut = TxOut(0x12a05f200L satoshi, Array.empty[Byte]) :: Nil,
       lockTime = 0)
-    val ctx = Script.Context(tx, 0, 0)
+    val ctx = Script.Context(tx, 0, 0 satoshi)
     val runner = new Script.Runner(ctx)
     val script = OP_1 :: OP_2 :: OP_EQUAL :: OP_IF :: OP_3 :: OP_ELSE :: OP_4 :: OP_ENDIF :: Nil
     val stack = runner.run(script)

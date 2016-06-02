@@ -373,7 +373,7 @@ object Script {
     * @param tx         transaction that is being verified
     * @param inputIndex 0-based index of the tx input that is being processed
     */
-  case class Context(tx: Transaction, inputIndex: Int, amount: Long) {
+  case class Context(tx: Transaction, inputIndex: Int, amount: Satoshi) {
     require(inputIndex >= 0 && inputIndex < tx.txIn.length, "invalid input index")
   }
 

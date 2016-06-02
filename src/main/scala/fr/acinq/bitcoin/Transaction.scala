@@ -308,7 +308,7 @@ object Transaction extends BtcMessage[Transaction] {
     * @param amount               amount of the output claimed by this input
     * @return a hash which can be used to sign the referenced tx input
     */
-  def hashForSigning(tx: Transaction, inputIndex: Int, previousOutputScript: BinaryData, sighashType: Int, amount: Long, signatureVersion: Int): Seq[Byte] = {
+  def hashForSigning(tx: Transaction, inputIndex: Int, previousOutputScript: BinaryData, sighashType: Int, amount: Satoshi, signatureVersion: Int): Seq[Byte] = {
     signatureVersion match {
       case 1 =>
         val hashPrevOut: BinaryData = if (!isAnyoneCanPay(sighashType)) {
@@ -331,7 +331,7 @@ object Transaction extends BtcMessage[Transaction] {
         out.write(hashSequence)
         out.write(OutPoint.write(tx.txIn(inputIndex).outPoint, Protocol.PROTOCOL_VERSION))
         Protocol.writeScript(previousOutputScript, out)
-        Protocol.writeUInt64(amount, out)
+        Protocol.writeUInt64(amount.toLong, out)
         Protocol.writeUInt32(tx.txIn(inputIndex).sequence, out)
         out.write(hashOutputs)
         Protocol.writeUInt32(tx.lockTime, out)
@@ -357,14 +357,14 @@ object Transaction extends BtcMessage[Transaction] {
     * @param randomize            if false, the output signature will not be randomized (use for testing only)
     * @return the encoded signature of this tx for this specific tx input
     */
-  def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: Seq[Byte], sighashType: Int, amount: Long, signatureVersion: Int, privateKey: Seq[Byte], randomize: Boolean): Seq[Byte] = {
+  def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: Seq[Byte], sighashType: Int, amount: Satoshi, signatureVersion: Int, privateKey: Seq[Byte], randomize: Boolean): Seq[Byte] = {
     val hash = hashForSigning(tx, inputIndex, previousOutputScript, sighashType, amount, signatureVersion)
     val (r, s) = Crypto.sign(hash, privateKey.take(32), randomize)
     val sig = Crypto.encodeSignature(r, s)
     sig :+ (sighashType.toByte)
   }
 
-  def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: Seq[Byte], sighashType: Int, amount: Long, signatureVersion: Int, privateKey: Seq[Byte]): Seq[Byte] =
+  def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: Seq[Byte], sighashType: Int, amount: Satoshi, signatureVersion: Int, privateKey: Seq[Byte]): Seq[Byte] =
     signInput(tx, inputIndex, previousOutputScript, sighashType, amount, signatureVersion, privateKey, true)
 
   /**
@@ -378,7 +378,7 @@ object Transaction extends BtcMessage[Transaction] {
     * @return the encoded signature of this tx for this specific tx input
     */
   def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: Seq[Byte], sighashType: Int, privateKey: Seq[Byte], randomize: Boolean): Seq[Byte] =
-    signInput(tx, inputIndex, previousOutputScript, sighashType, amount = 0, signatureVersion = 0, privateKey, randomize)
+    signInput(tx, inputIndex, previousOutputScript, sighashType, amount = 0 satoshi, signatureVersion = 0, privateKey, randomize)
 
   def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: Seq[Byte], sighashType: Int, privateKey: Seq[Byte]): Seq[Byte] =
     signInput(tx, inputIndex, previousOutputScript, sighashType, privateKey, true)
@@ -415,7 +415,7 @@ object Transaction extends BtcMessage[Transaction] {
       val prevOutput = previousOutputs(tx.txIn(i).outPoint)
       val prevOutputScript = prevOutput.publicKeyScript
       val amount = prevOutput.amount
-      val ctx = new Script.Context(tx, i, amount.toLong)
+      val ctx = new Script.Context(tx, i, amount)
       val runner = new Script.Runner(ctx, scriptFlags, callback)
       if (!runner.verifyScripts(tx.txIn(i).signatureScript, prevOutputScript, tx.witness(i))) throw new RuntimeException(s"tx ${tx.txid} does not spend its input # $i")
     }

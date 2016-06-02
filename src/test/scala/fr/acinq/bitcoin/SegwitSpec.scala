@@ -24,7 +24,7 @@ class SegwitSpec extends FunSuite {
 
   test("tx hash") {
     val tx = Transaction.read("0100000002fff7f7881a8099afa6940d42d1e7f6362bec38171ea3edf433541db4e4ad969f0000000000eeffffffef51e1b804cc89d182d279655c3aa89e815b1b309fe287d9b2b55d57b90ec68a0100000000ffffffff02202cb206000000001976a9148280b37df378db99f66f85c95a783a76ac7a6d5988ac9093510d000000001976a9143bde42dbee7e4dbe6a21b2d50ce2f0167faa815988ac11000000")
-    val hash: BinaryData = Transaction.hashForSigning(tx, 1, BinaryData("76a9141d0f172a0ecb48aee1be1f2687d2963ae33f71a188ac"), SIGHASH_ALL, 600000000, 1)
+    val hash: BinaryData = Transaction.hashForSigning(tx, 1, BinaryData("76a9141d0f172a0ecb48aee1be1f2687d2963ae33f71a188ac"), SIGHASH_ALL, 600000000 satoshi, 1)
     assert(hash == BinaryData("c37af31116d1b27caf68aae9e3ac82f1477929014d5b917657d0eb49478cb670"))
 
     val priv: BinaryData = "619c335025c7f4012e556c2a58b2506e30b8511b53ade95ea316fd8c3286feb901"
@@ -44,7 +44,7 @@ class SegwitSpec extends FunSuite {
     val priv: BinaryData = "619c335025c7f4012e556c2a58b2506e30b8511b53ade95ea316fd8c3286feb901"
     val pub: BinaryData = Crypto.publicKeyFromPrivateKey(priv)
     val pubKeyScript = Script.write(OP_0 :: OP_PUSHDATA(Crypto.hash160(pub)) :: Nil)
-    val runner = new Script.Runner(new Script.Context(tx, 1, 600000000), ScriptFlags.STANDARD_SCRIPT_VERIFY_FLAGS)
+    val runner = new Script.Runner(new Script.Context(tx, 1, 600000000 satoshi), ScriptFlags.STANDARD_SCRIPT_VERIFY_FLAGS)
     assert(runner.verifyScripts(tx.txIn(1).signatureScript, pubKeyScript, tx.witness(1)))
   }
 
@@ -95,7 +95,7 @@ class SegwitSpec extends FunSuite {
       // mind this: the pubkey script used for signing is not the prevout pubscript (which is just a push
       // of the pubkey hash), but the actual script that is evaluated by the script engine
       val pubKeyScript = Script.write(OP_DUP :: OP_HASH160 :: OP_PUSHDATA(Crypto.hash160(pub1)) :: OP_EQUALVERIFY :: OP_CHECKSIG :: Nil)
-      val sig = Transaction.signInput(tmp, 0, pubKeyScript, SIGHASH_ALL, tx2.txOut(0).amount.toLong, 1, priv1, randomize = false)
+      val sig = Transaction.signInput(tmp, 0, pubKeyScript, SIGHASH_ALL, tx2.txOut(0).amount, 1, priv1, randomize = false)
       val witness = ScriptWitness(Seq(sig, pub1))
       tmp.copy(witness = Seq(witness))
     }
@@ -143,7 +143,7 @@ class SegwitSpec extends FunSuite {
         lockTime = 0
       )
       val pubKeyScript = Script.createMultiSigMofN(2, Seq(pub2, pub3))
-      val hash = Transaction.hashForSigning(tmp, 0, pubKeyScript, SIGHASH_ALL, tx2.txOut(0).amount.toLong, 1)
+      val hash = Transaction.hashForSigning(tmp, 0, pubKeyScript, SIGHASH_ALL, tx2.txOut(0).amount, 1)
       val sig2 = Crypto.encodeSignature(Crypto.sign(hash, priv2.take(32), randomize = false)) :+ SIGHASH_ALL.toByte
       val sig3 = Crypto.encodeSignature(Crypto.sign(hash, priv3.take(32), randomize = false)) :+ SIGHASH_ALL.toByte
       val witness = ScriptWitness(Seq(BinaryData.empty, sig2, sig3, pubKeyScript))
@@ -179,7 +179,7 @@ class SegwitSpec extends FunSuite {
         lockTime = 0
       )
       val pubKeyScript = Script.write(OP_DUP :: OP_HASH160 :: OP_PUSHDATA(Crypto.hash160(pub1)) :: OP_EQUALVERIFY :: OP_CHECKSIG :: Nil)
-      val hash = Transaction.hashForSigning(tmp, 0, pubKeyScript, SIGHASH_ALL, tx.txOut(1).amount.toLong, 1)
+      val hash = Transaction.hashForSigning(tmp, 0, pubKeyScript, SIGHASH_ALL, tx.txOut(1).amount, 1)
       val sig = Crypto.encodeSignature(Crypto.sign(hash, priv1.take(32), randomize = false)) :+ SIGHASH_ALL.toByte
       val witness = ScriptWitness(Seq(sig, pub1))
       tmp.updateSigScript(0, OP_PUSHDATA(script) :: Nil).copy(witness = Seq(witness))
