@@ -875,7 +875,7 @@ object Script {
       var hadWitness = false
       val stack1 = if ((scriptFlag & SCRIPT_VERIFY_WITNESS) != 0) {
         spub match {
-          case op :: OP_PUSHDATA(program, code) :: Nil if isSimpleValue(op) && OP_PUSHDATA.isMinimal(program, code) && program.length >= 2 && program.length <= 32 => {
+          case op :: OP_PUSHDATA(program, code) :: Nil if isSimpleValue(op) && OP_PUSHDATA.isMinimal(program, code) && program.length >= 2 && program.length <= 40 => {
             hadWitness = true
             val witnessVersion = simpleValue(op)
             require(ssig.isEmpty, "Malleated segwit script")
