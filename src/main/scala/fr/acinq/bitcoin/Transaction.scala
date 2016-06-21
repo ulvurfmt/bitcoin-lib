@@ -241,7 +241,7 @@ object Transaction extends BtcMessage[Transaction] {
     * @param sighashType          signature hash type
     * @return a new transaction with proper inputs and outputs according to SIGHASH_TYPE rules
     */
-  def prepareForSigning(tx: Transaction, inputIndex: Int, previousOutputScript: Array[Byte], sighashType: Int): Transaction = {
+  def prepareForSigning(tx: Transaction, inputIndex: Int, previousOutputScript: BinaryData, sighashType: Int): Transaction = {
     val filteredScript = Script.write(Script.parse(previousOutputScript).filterNot(_ == OP_CODESEPARATOR))
 
     def removeSignatureScript(txin: TxIn): TxIn = txin.copy(signatureScript = Array.empty[Byte])
@@ -299,6 +299,18 @@ object Transaction extends BtcMessage[Transaction] {
   }
 
   /**
+    * hash a tx for signing (pre-segwit)
+    *
+    * @param tx                   input transaction
+    * @param inputIndex           index of the tx input that is being processed
+    * @param previousOutputScript public key script of the output claimed by this tx input
+    * @param sighashType          signature hash type
+    * @return a hash which can be used to sign the referenced tx input
+    */
+  def hashForSigning(tx: Transaction, inputIndex: Int, previousOutputScript: Seq[ScriptElt], sighashType: Int): Seq[Byte] =
+    hashForSigning(tx, inputIndex, Script.write(previousOutputScript), sighashType)
+
+    /**
     * hash a tx for signing
     *
     * @param tx                   input transaction
@@ -343,6 +355,18 @@ object Transaction extends BtcMessage[Transaction] {
     }
   }
 
+  /**
+    * hash a tx for signing
+    *
+    * @param tx                   input transaction
+    * @param inputIndex           index of the tx input that is being processed
+    * @param previousOutputScript public key script of the output claimed by this tx input
+    * @param sighashType          signature hash type
+    * @param amount               amount of the output claimed by this input
+    * @return a hash which can be used to sign the referenced tx input
+    */
+  def hashForSigning(tx: Transaction, inputIndex: Int, previousOutputScript: Seq[ScriptElt], sighashType: Int, amount: Satoshi, signatureVersion: Int): Seq[Byte] =
+    hashForSigning(tx, inputIndex, previousOutputScript, sighashType, amount, signatureVersion)
 
   /**
     * sign a tx input
@@ -354,17 +378,45 @@ object Transaction extends BtcMessage[Transaction] {
     * @param amount               amount of the output claimed by this tx input
     * @param signatureVersion     signature version (1: segwit, 0: pre-segwit)
     * @param privateKey           private key
-    * @param randomize            if false, the output signature will not be randomized (use for testing only)
+    * @param randomize            if false, the output signature will not be randomized (use for testing only !!)
     * @return the encoded signature of this tx for this specific tx input
     */
-  def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: Seq[Byte], sighashType: Int, amount: Satoshi, signatureVersion: Int, privateKey: Seq[Byte], randomize: Boolean): Seq[Byte] = {
+  def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: BinaryData, sighashType: Int, amount: Satoshi, signatureVersion: Int, privateKey: Seq[Byte], randomize: Boolean): Seq[Byte] = {
     val hash = hashForSigning(tx, inputIndex, previousOutputScript, sighashType, amount, signatureVersion)
     val (r, s) = Crypto.sign(hash, privateKey.take(32), randomize)
     val sig = Crypto.encodeSignature(r, s)
     sig :+ (sighashType.toByte)
   }
 
-  def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: Seq[Byte], sighashType: Int, amount: Satoshi, signatureVersion: Int, privateKey: Seq[Byte]): Seq[Byte] =
+  /**
+    * sign a tx input
+    *
+    * @param tx                   input transaction
+    * @param inputIndex           index of the tx input that is being processed
+    * @param previousOutputScript public key script of the output claimed by this tx input
+    * @param sighashType          signature hash type, which will be appended to the signature
+    * @param amount               amount of the output claimed by this tx input
+    * @param signatureVersion     signature version (1: segwit, 0: pre-segwit)
+    * @param privateKey           private key
+    * @param randomize            if false, the output signature will not be randomized (use for testing only !!)
+    * @return the encoded signature of this tx for this specific tx input
+    */
+  def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: Seq[ScriptElt], sighashType: Int, amount: Satoshi, signatureVersion: Int, privateKey: Seq[Byte], randomize: Boolean): Seq[Byte] =
+    signInput(tx, inputIndex, Script.write(previousOutputScript), sighashType, amount, signatureVersion, privateKey, randomize)
+
+    /**
+    * sign a tx input
+    *
+    * @param tx                   input transaction
+    * @param inputIndex           index of the tx input that is being processed
+    * @param previousOutputScript public key script of the output claimed by this tx input
+    * @param sighashType          signature hash type, which will be appended to the signature
+    * @param amount               amount of the output claimed by this tx input
+    * @param signatureVersion     signature version (1: segwit, 0: pre-segwit)
+    * @param privateKey           private key
+    * @return the encoded signature of this tx for this specific tx input
+    */
+  def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: BinaryData, sighashType: Int, amount: Satoshi, signatureVersion: Int, privateKey: Seq[Byte]): Seq[Byte] =
     signInput(tx, inputIndex, previousOutputScript, sighashType, amount, signatureVersion, privateKey, true)
 
   /**
@@ -377,10 +429,12 @@ object Transaction extends BtcMessage[Transaction] {
     * @param randomize            if false, the output signature will not be randomized (use for testing only)
     * @return the encoded signature of this tx for this specific tx input
     */
-  def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: Seq[Byte], sighashType: Int, privateKey: Seq[Byte], randomize: Boolean): Seq[Byte] =
+  @deprecated
+  def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: BinaryData, sighashType: Int, privateKey: Seq[Byte], randomize: Boolean): Seq[Byte] =
     signInput(tx, inputIndex, previousOutputScript, sighashType, amount = 0 satoshi, signatureVersion = 0, privateKey, randomize)
 
-  def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: Seq[Byte], sighashType: Int, privateKey: Seq[Byte]): Seq[Byte] =
+  @deprecated
+  def signInput(tx: Transaction, inputIndex: Int, previousOutputScript: BinaryData, sighashType: Int, privateKey: Seq[Byte]): Seq[Byte] =
     signInput(tx, inputIndex, previousOutputScript, sighashType, privateKey, true)
 
   /**
@@ -490,6 +544,8 @@ case class Transaction(version: Long, txIn: Seq[TxIn], txOut: Seq[TxOut], lockTi
     * @return a new transaction that is of copy of this one but where the signature script of the ith input has been replace by sigscript
     */
   def updateSigScript(i: Int, sigScript: Seq[ScriptElt]) : Transaction = updateSigScript(i, Script.write(sigScript))
+
+  def updateWitness(i: Int, witness: ScriptWitness) : Transaction = this.copy(witness = this.witness.updated(i, witness))
 
   /**
     *
