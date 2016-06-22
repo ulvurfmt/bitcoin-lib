@@ -33,7 +33,7 @@ object TransactionSpec {
           }
         })
 
-        val tx = Transaction.read(serializedTransaction, Protocol.PROTOCOL_VERSION | Transaction.SERIALIZE_TRANSACTION_WITNESS)
+        val tx = Transaction.read(serializedTransaction, Protocol.PROTOCOL_VERSION)
         Try {
           Transaction.validate(tx)
           for(i <- 0 until tx.txIn.length if !OutPoint.isCoinbase(tx.txIn(i).outPoint)) {

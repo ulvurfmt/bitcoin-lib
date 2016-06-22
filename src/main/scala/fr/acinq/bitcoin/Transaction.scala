@@ -148,14 +148,14 @@ case class ScriptWitness(stack: Seq[BinaryData]) {
 }
 
 object Transaction extends BtcMessage[Transaction] {
-  val SERIALIZE_TRANSACTION_WITNESS = 0x40000000L
+  val SERIALIZE_TRANSACTION_NO_WITNESS = 0x40000000L
 
   /**
     *
     * @param version protocol version (and NOT transaction version !)
     * @return true if protocol version specifies that witness data is to be serialized
     */
-  def serializeTxWitness(version: Long): Boolean = (version & SERIALIZE_TRANSACTION_WITNESS) != 0
+  def serializeTxWitness(version: Long): Boolean = (version & SERIALIZE_TRANSACTION_NO_WITNESS) == 0
 
   /**
     *
@@ -294,7 +294,7 @@ object Transaction extends BtcMessage[Transaction] {
       Hash.One
     } else {
       val txCopy = prepareForSigning(tx, inputIndex, previousOutputScript, sighashType)
-      Crypto.hash256(Transaction.write(txCopy) ++ writeUInt32(sighashType))
+      Crypto.hash256(Transaction.write(txCopy, Transaction.SERIALIZE_TRANSACTION_NO_WITNESS) ++ writeUInt32(sighashType))
     }
   }
 
@@ -512,7 +512,9 @@ case class SignData(prevPubKeyScript: BinaryData, privateKey: BinaryData)
   * @param lockTime The block number or timestamp at which this transaction is locked
   */
 case class Transaction(version: Long, txIn: Seq[TxIn], txOut: Seq[TxOut], lockTime: Long, witness: Seq[ScriptWitness]) {
-  lazy val hash: BinaryData = Crypto.hash256(Transaction.write(this))
+  import Transaction._
+
+  lazy val hash: BinaryData = Crypto.hash256(Transaction.write(this, SERIALIZE_TRANSACTION_NO_WITNESS))
   lazy val txid: BinaryData = hash.reverse
 
   /**
